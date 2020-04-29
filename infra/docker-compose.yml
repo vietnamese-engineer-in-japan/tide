@@ -3,7 +3,7 @@ services:
     app:
         build: ./app
         ports:
-            - ${PORT}
+            - ${PORT}:${PORT}
         volumes:
             - ../app:/home/node/app
         tty: true
