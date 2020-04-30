@@ -27,6 +27,8 @@
   },
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "dependencies": {
+    "@magenta/music": "^1.7.0",
+    "file-saver": "^2.0.2",
     "tide": "file:../pkg"
   },
   "devDependencies": {

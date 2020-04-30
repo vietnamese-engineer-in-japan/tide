@@ -14,5 +14,8 @@ module.exports = {
   devServer: {
     host: "0.0.0.0"
   },
-  devtool: "inline-source-map"
+  devtool: "inline-source-map",
+  node: {
+    fs: "empty"
+  },
 };

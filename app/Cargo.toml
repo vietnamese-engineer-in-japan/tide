@@ -33,7 +33,8 @@ version = "0.3"
 version = "0.3"
 features = [
     "Blob",
-    "FileReader"
+    "FileReader",
+    "OfflineAudioContext"
 ]
 
 [dev-dependencies]

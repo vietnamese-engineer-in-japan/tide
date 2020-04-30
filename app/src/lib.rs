@@ -2,8 +2,8 @@ mod utils;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use js_sys::{Promise};
-use web_sys::{Blob, FileReader, Event};
+use js_sys::{Promise, ArrayBuffer};
+use web_sys::{Blob, FileReader, Event, OfflineAudioContext};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -34,4 +34,19 @@ pub fn read_file(blob: Blob) -> Promise {
         onload.forget();
         file_reader.read_as_array_buffer(&blob).unwrap_or_default();
     });
+}
+
+#[wasm_bindgen]
+pub fn decode_audio(buffer: &ArrayBuffer) -> Promise {
+    // See: https://github.com/magenta/magenta-js/blob/master/music/src/core/audio_utils.ts#L78
+    let context = match OfflineAudioContext::new_with_number_of_channels_and_length_and_sample_rate(
+        1, 16000, 16000.0
+    ) {
+        Ok(c) => c,
+        Err(e) => return Promise::reject(&e)
+    };
+    return match context.decode_audio_data(buffer) {
+        Ok(p) => p,
+        Err(e) => return Promise::reject(&e)
+    };
 }
