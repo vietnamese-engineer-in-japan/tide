@@ -2,6 +2,8 @@ version: "3"
 services:
     app:
         build: ./app
+        environment:
+          - NUXT_PORT=${PORT}
         ports:
             - ${PORT}:${PORT}
         volumes:
