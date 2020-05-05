@@ -5,9 +5,9 @@
         <v-file-input v-model="file" :disabled="isProcessing"></v-file-input>
       </v-col>
       <v-col :cols="3">
-        <v-btn :disabled="isProcessing" @click="process">{{
-          isProcessing ? 'Processing...' : 'Process'
-        }}</v-btn>
+        <v-btn :disabled="isProcessing" @click="process">
+          {{ isProcessing ? 'Processing...' : 'Process' }}
+        </v-btn>
       </v-col>
       <v-col :cols="3">
         <v-btn v-if="isDone" @click="save">Save</v-btn>
