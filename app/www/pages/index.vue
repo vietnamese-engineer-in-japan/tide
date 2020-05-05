@@ -6,7 +6,7 @@
       </v-col>
       <v-col :cols="3">
         <v-btn :disabled="isProcessing" @click="process">
-          {{ isProcessing ? 'Processing...' : 'Process' }}
+          {{ isProcessing ? `Processing (${progress}%)` : 'Process' }}
         </v-btn>
       </v-col>
       <v-col :cols="3">
@@ -42,6 +42,7 @@ export default {
   data() {
     return {
       file: null,
+      progress: 0,
       isProcessing: false,
       isDone: false,
       midi: null,
@@ -50,6 +51,7 @@ export default {
   },
   methods: {
     async process(event) {
+      this.progress = 0
       this.isProcessing = true
       this.isDone = false
       let result = await wasm.read_file(this.file)
@@ -64,8 +66,10 @@ export default {
         const buffer = context.createBuffer(2, bufferLength, rate)
         const sequences = []
         for (let i = 0; i < Math.ceil(audio.length / bufferLength); i++) {
+          const length = i * bufferLength
+          this.progress = Math.round((length * 100) / audio.length)
           for (let j = 0; j < audio.numberOfChannels; j++) {
-            audio.copyFromChannel(data, j, i * bufferLength)
+            audio.copyFromChannel(data, j, length)
             buffer.copyToChannel(data, j, 0)
           }
           sequences.push(await this.model.transcribeFromAudioBuffer(buffer))

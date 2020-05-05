@@ -2,7 +2,7 @@
   <div ref="container" style="overflow-x: hidden">
     <v-toolbar flat height="90">
       <v-row align="center">
-        <v-col :cols="5" align="center">
+        <v-col :cols="5" align="end">
           <v-btn outlined fab small color="light-blue" @click="stop">
             <v-icon>mdi-stop</v-icon>
           </v-btn>
@@ -14,13 +14,24 @@
             </v-icon>
           </v-btn>
         </v-col>
-        <v-col :cols="5" align="center">
-          <v-slider v-model="volume" max="1" step="0.1" />
+        <v-col :cols="5">
+          <v-slider
+            v-model="volume"
+            append-icon="mdi-volume-high"
+            prepend-icon="mdi-volume-low"
+            max="10"
+            step="0.1"
+          />
         </v-col>
       </v-row>
     </v-toolbar>
-    <v-toolbar flat height="90">
-      <v-progress-linear v-model="progress" height="40" color="light-blue" />
+    <v-toolbar flat height="60">
+      <v-progress-linear
+        :value="progress"
+        height="20"
+        color="light-blue"
+        @click="setProgress($event)"
+      />
     </v-toolbar>
     <div id="notation" :style="notationTransform" />
   </div>
@@ -41,7 +52,7 @@ export default {
   },
   data() {
     return {
-      volume: 0.5,
+      volume: 1,
       progress: 0,
       scale: 0.5,
       width: 0
@@ -59,21 +70,24 @@ export default {
     const AudioContext =
       window.AudioContext || window.webkitAudioContext || false
     const context = new AudioContext()
-    const loud = 4
     const eventFilter = function(event) {
       return event.name === 'Note on' && event.velocity > 0
+    }
+    this.player.getSongPercent = function() {
+      const songTime = (this.getCurrentTick() / this.division / this.tempo) * 60
+      return (songTime / this.getSongTime()) * 100
     }
     // Play note
     Soundfont.instrument(new AudioContext(), 'acoustic_grand_piano').then(
       (instrument) => {
         this.player.on('playing', () => {
-          this.progress = 100 - this.player.getSongPercentRemaining()
+          this.progress = Math.round(this.player.getSongPercent())
         })
         let lastTick = null
         this.player.on('midiEvent', (event) => {
           if (eventFilter(event)) {
             instrument.play(event.noteName, context.currentTime, {
-              gain: (event.velocity / 100) * this.volume * loud
+              gain: (event.velocity / 100) * this.volume
             })
             if (lastTick) {
               SVG.select(`.tick${lastTick}`).fill(colors.indigo.base)
@@ -154,6 +168,16 @@ export default {
     stop() {
       this.player.stop()
       this.progress = 0
+    },
+    setProgress(event) {
+      const position = event.offsetX
+      const bar = document.querySelector('.v-progress-linear')
+      const width = bar.clientWidth
+      const progress = (position / width) * 100
+      if (this.player.isPlaying()) {
+        this.player.skipToPercent(progress)
+        this.player.play()
+      }
     }
   }
 }

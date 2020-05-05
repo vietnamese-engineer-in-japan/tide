@@ -5,6 +5,14 @@
         <nuxt />
       </v-container>
     </v-content>
+    <v-footer>
+      <div>
+        Powered by
+        <a href="https://g.co/magenta/js">magenta-js</a>,
+        <a href="https://www.rust-lang.org/what/wasm">Rust with WASM</a>,
+        <a href="https://nuxtjs.org">Nuxt.js</a>
+      </div>
+    </v-footer>
   </v-app>
 </template>
 
