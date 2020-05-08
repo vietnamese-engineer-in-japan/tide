@@ -1,15 +1,27 @@
 <template>
   <v-container>
     <v-row>
-      <v-col :cols="6">
-        <v-file-input v-model="file" :disabled="isProcessing"></v-file-input>
-      </v-col>
       <v-col :cols="3">
+        <v-select v-model="type" :items="types"></v-select>
+      </v-col>
+      <v-col :cols="5">
+        <v-text-field v-if="isYoutube" v-model="youtubeUrl"></v-text-field>
+        <v-file-input
+          v-else
+          v-model="file"
+          :disabled="isProcessing"
+        ></v-file-input>
+      </v-col>
+      <v-col :cols="2">
         <v-btn :disabled="isProcessing" @click="process">
-          {{ isProcessing ? `Processing (${progress}%)` : 'Process' }}
+          {{
+            isProcessing
+              ? `Processing${progress ? ` (${progress})` : ''}`
+              : 'Process'
+          }}
         </v-btn>
       </v-col>
-      <v-col :cols="3">
+      <v-col :cols="2">
         <v-btn v-if="isDone" @click="save">Save</v-btn>
       </v-col>
     </v-row>
@@ -40,34 +52,60 @@ export default {
     }
   },
   data() {
+    const types = ['Youtube URL', 'Audio file']
     return {
+      type: types[0],
+      types,
+      youtubeUrl: '',
       file: null,
-      progress: 0,
+      fileName: '',
+      progress: '',
       isProcessing: false,
       isDone: false,
       midi: null,
       player: new Player()
     }
   },
+  computed: {
+    isYoutube() {
+      return this.type === this.types[0]
+    }
+  },
   methods: {
     async process(event) {
-      this.progress = 0
+      this.progress = 'reading'
       this.isProcessing = true
       this.isDone = false
-      let result = await wasm.read_file(this.file)
-      const array = new Uint8Array(result)
+      let file = null
+      if (this.isYoutube) {
+        const url = new URL(this.youtubeUrl)
+        const videoId = new URLSearchParams(url.search).get('v')
+        const apiUrl = 'https://oggy.metalwhale.dev:8000'
+        const streamUrl = `${apiUrl}/youtube_audio?video_id=${videoId}`
+        const infoUrl = `${apiUrl}/youtube_info?video_id=${videoId}`
+        file = await this.$axios.$get(streamUrl, { responseType: 'blob' })
+        this.$axios.$get(infoUrl).then((response) => {
+          this.fileName = response.info.title
+        })
+      } else {
+        file = this.file
+        this.fileName = file.name.split('.')[0]
+      }
+      let fileBuffer = await wasm.read_file(file)
+      const array = new Uint8Array(fileBuffer)
       // See: https://github.com/grimmdude/MidiPlayerJS/blob/master/src/player.js#L103
       if (Utils.bytesToLetters(array.subarray(0, 4)) !== 'MThd') {
-        const audio = await wasm.decode_audio(result)
+        const audio = await wasm.decode_audio(fileBuffer)
         const rate = audio.sampleRate
         const bufferLength = rate * 10
         const data = new Float32Array(bufferLength)
         const context = new OfflineAudioContext(1, rate, rate)
         const buffer = context.createBuffer(2, bufferLength, rate)
         const sequences = []
-        for (let i = 0; i < Math.ceil(audio.length / bufferLength); i++) {
+        const sequencesCount = Math.ceil(audio.length / bufferLength)
+        for (let i = 0; i < sequencesCount; i++) {
           const length = i * bufferLength
-          this.progress = Math.round((length * 100) / audio.length)
+          this.progress = `${i + 1}/${sequencesCount} sequences`
           for (let j = 0; j < audio.numberOfChannels; j++) {
             audio.copyFromChannel(data, j, length)
             buffer.copyToChannel(data, j, 0)
@@ -76,17 +114,16 @@ export default {
         }
         const sequence = mm.sequences.concatenate(sequences)
         this.midi = mm.sequenceProtoToMidi(sequence)
-        result = this.midi.buffer
+        fileBuffer = this.midi.buffer
       } else {
         this.midi = array
       }
-      this.player.loadArrayBuffer(result)
+      this.player.loadArrayBuffer(fileBuffer)
       this.isProcessing = false
       this.isDone = true
     },
     save() {
-      const name = this.file.name.split('.')[0]
-      saveAs(new File([this.midi], `${name}.mid`))
+      saveAs(new File([this.midi], `${this.fileName}.mid`))
     }
   }
 }
